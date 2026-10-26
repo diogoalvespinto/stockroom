@@ -41,9 +41,23 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  gem "rspec-rails", "~> 8.0"
+
+  gem "factory_bot_rails", "~> 6.5"
+  gem "faker", "~> 3.8"
 end
 
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+end
+
+group :test do
+  gem "shoulda-matchers", "~> 8.0"
+
+  gem "capybara", "~> 3.40"
+  gem "selenium-webdriver", "~> 4.51"
+
+  gem "simplecov", "~> 1.3", require: false
 end
