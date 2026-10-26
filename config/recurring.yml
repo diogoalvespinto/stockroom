@@ -16,3 +16,6 @@ production:
   flag_expiring_lots:
     class: FlagExpiringLotsJob
     schedule: every day at 6am
+  purge_idempotency_keys:
+    class: PurgeIdempotencyKeysJob
+    schedule: every hour at minute 30
