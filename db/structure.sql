@@ -393,6 +393,13 @@ CREATE INDEX index_sessions_on_user_id ON public.sessions USING btree (user_id);
 
 
 --
+-- Name: index_stock_movements_for_balances; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stock_movements_for_balances ON public.stock_movements USING btree (warehouse_id, lot_id) INCLUDE (quantity);
+
+
+--
 -- Name: index_stock_movements_on_lot_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -404,13 +411,6 @@ CREATE INDEX index_stock_movements_on_lot_id ON public.stock_movements USING btr
 --
 
 CREATE INDEX index_stock_movements_on_user_id ON public.stock_movements USING btree (user_id);
-
-
---
--- Name: index_stock_movements_on_warehouse_id_and_lot_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_stock_movements_on_warehouse_id_and_lot_id ON public.stock_movements USING btree (warehouse_id, lot_id);
 
 
 --
@@ -481,6 +481,7 @@ ALTER TABLE ONLY public.stock_movements
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026191935'),
 ('20261026190406'),
 ('20261026190405'),
 ('20261026190404'),
