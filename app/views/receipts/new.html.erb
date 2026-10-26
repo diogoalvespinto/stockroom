@@ -1,0 +1,41 @@
+<% content_for :title, "Receive goods · Stockroom" %>
+
+<section class="card">
+  <h1>Receive goods</h1>
+
+  <%= form_with model: @receipt, url: receipts_path, class: "form" do |form| %>
+    <%= render "shared/form_errors", form: form %>
+
+    <div class="field-row">
+      <div class="field">
+        <%= form.label :item_id, "Item" %>
+        <%= form.collection_select :item_id, @items, :id, ->(item) { "#{item.sku} · #{item.name}" },
+              { prompt: "Choose an item" }, required: true %>
+      </div>
+
+      <div class="field">
+        <%= form.label :warehouse_id, "Warehouse" %>
+        <%= form.collection_select :warehouse_id, @warehouses, :id, :name, { prompt: "Choose a warehouse" }, required: true %>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <%= form.label :lot_number %>
+        <%= form.text_field :lot_number, required: true %>
+      </div>
+
+      <div class="field">
+        <%= form.label :expiry_date %>
+        <%= form.date_field :expiry_date %>
+      </div>
+
+      <div class="field">
+        <%= form.label :quantity %>
+        <%= form.number_field :quantity, min: 1, step: 1, required: true %>
+      </div>
+    </div>
+
+    <%= form.submit "Receive", class: "button" %>
+  <% end %>
+</section>

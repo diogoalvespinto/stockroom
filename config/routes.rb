@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
   root "stock#index"
+  resources :receipts, only: %i[new create]
 
   namespace :api, defaults: { format: :json } do
     namespace :v1 do

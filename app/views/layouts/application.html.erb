@@ -29,6 +29,7 @@
       <% if authenticated? %>
         <nav class="nav">
           <%= nav_link "Stock", root_path %>
+          <%= nav_link "Receive goods", new_receipt_path %>
         </nav>
         <div class="account">
           <span><%= Current.user.email_address %></span>
