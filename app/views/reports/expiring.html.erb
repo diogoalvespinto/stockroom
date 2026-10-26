@@ -1,0 +1,48 @@
+<% content_for :title, "Expiring lots · Stockroom" %>
+
+<div class="toolbar">
+  <h1>Expiring lots</h1>
+
+  <%= form_with url: expiring_report_path, method: :get, data: { controller: "auto-submit", turbo_frame: "expiring", turbo_action: "advance" } do |form| %>
+    <div class="field">
+      <%= form.label :days, "Expiring within" %>
+      <%= form.select :days, ExpiringLotsReport::WINDOWS.map { |days| [ "#{days} days", days ] },
+            { selected: @report.within_days }, data: { action: "auto-submit#submit" } %>
+    </div>
+    <%= form.submit "Show", name: nil, class: "button", data: { auto_submit_target: "button" } %>
+  <% end %>
+</div>
+
+<%= turbo_frame_tag "expiring" do %>
+  <% rows = @report.rows %>
+  <% if rows.empty? %>
+    <p class="empty">No lots in stock expire within <%= @report.within_days %> days.</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Expires</th>
+          <th>Lot</th>
+          <th>Item</th>
+          <th>Warehouse</th>
+          <th class="number">Quantity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |row| %>
+          <% days_left = @report.days_left(row.lot) %>
+          <tr>
+            <td>
+              <%= row.lot.expiry_date.iso8601 %>
+              <%= tag.span(days_left.zero? ? "today" : "in #{pluralize(days_left, "day")}", class: "badge") %>
+            </td>
+            <td><%= row.lot.lot_number %></td>
+            <td><%= row.item.sku %> · <%= row.item.name %></td>
+            <td><%= row.warehouse.code %></td>
+            <td class="number"><%= row.quantity %> <%= row.item.unit_of_measure %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+<% end %>

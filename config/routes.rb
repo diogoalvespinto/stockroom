@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   root "stock#index"
   resources :receipts, only: %i[new create]
   resources :issues, only: %i[new create]
+  get "reports/expiring", to: "reports#expiring", as: :expiring_report
 
   namespace :api, defaults: { format: :json } do
     namespace :v1 do
