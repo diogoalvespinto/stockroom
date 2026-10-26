@@ -18,6 +18,29 @@ RSpec.describe Lot, type: :model do
     it { is_expected.to normalize(:lot_number).from(" l2026-a ").to("L2026-A") }
   end
 
+  describe ".usable_on" do
+    it "keeps lots expiring on or after the date and lots without expiry" do
+      today = Date.new(2026, 10, 26)
+      create(:lot, expiry_date: today - 1)
+      expiring_today = create(:lot, expiry_date: today)
+      later = create(:lot, expiry_date: today + 30)
+      no_expiry = create(:lot, :without_expiry)
+
+      expect(described_class.usable_on(today)).to contain_exactly(expiring_today, later, no_expiry)
+    end
+  end
+
+  describe ".fefo" do
+    it "orders by expiry date with undated lots last and ties broken by id" do
+      later = create(:lot, expiry_date: Date.new(2027, 3, 1))
+      no_expiry = create(:lot, :without_expiry)
+      sooner = create(:lot, expiry_date: Date.new(2027, 1, 1))
+      sooner_twin = create(:lot, expiry_date: Date.new(2027, 1, 1))
+
+      expect(described_class.fefo).to eq([ sooner, sooner_twin, later, no_expiry ])
+    end
+  end
+
   describe "#expired?" do
     let(:today) { Date.new(2026, 10, 26) }
 

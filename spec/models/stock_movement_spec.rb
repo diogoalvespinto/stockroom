@@ -66,6 +66,37 @@ RSpec.describe StockMovement, type: :model do
     end
   end
 
+  describe "balances" do
+    let(:warehouse) { create(:warehouse) }
+    let(:lot) { create(:lot) }
+    let(:other_lot) { create(:lot) }
+
+    before do
+      create(:stock_movement, lot: lot, warehouse: warehouse, quantity: 10)
+      create(:stock_movement, :issue, lot: lot, warehouse: warehouse, quantity: -3)
+      create(:stock_movement, lot: other_lot, warehouse: warehouse, quantity: 4)
+      create(:stock_movement, lot: lot, quantity: 50)
+    end
+
+    describe ".balance" do
+      it "sums the signed quantities of one lot in one warehouse" do
+        expect(described_class.balance(warehouse: warehouse, lot: lot)).to eq(7)
+      end
+
+      it "is zero for a lot that never entered the warehouse" do
+        expect(described_class.balance(warehouse: warehouse, lot: create(:lot))).to eq(0)
+      end
+    end
+
+    describe ".balances" do
+      it "returns the balance of each lot that has movements in the warehouse" do
+        balances = described_class.balances(warehouse: warehouse, lots: [ lot, other_lot, create(:lot) ])
+
+        expect(balances).to eq(lot.id => 7, other_lot.id => 4)
+      end
+    end
+  end
+
   describe "append-only ledger" do
     subject(:movement) { create(:stock_movement) }
 

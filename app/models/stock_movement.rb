@@ -18,6 +18,14 @@ class StockMovement < ApplicationRecord
   validates :transfer_id, presence: true, if: -> { transfer_out? || transfer_in? }
   validates :transfer_id, absence: true, unless: -> { transfer_out? || transfer_in? }
 
+  def self.balance(warehouse:, lot:)
+    where(warehouse: warehouse, lot: lot).sum(:quantity)
+  end
+
+  def self.balances(warehouse:, lots:)
+    where(warehouse: warehouse, lot: lots).group(:lot_id).sum(:quantity)
+  end
+
   def readonly?
     persisted? || super
   end
