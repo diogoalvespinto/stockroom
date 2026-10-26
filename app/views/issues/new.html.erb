@@ -1,0 +1,35 @@
+<% content_for :title, "Issue goods · Stockroom" %>
+
+<section class="card">
+  <h1>Issue goods</h1>
+  <p>Stock is taken from the lots that expire first. Expired lots are never issued.</p>
+
+  <%= form_with model: @issue, url: issues_path, class: "form" do |form| %>
+    <%= render "shared/form_errors", form: form %>
+
+    <div class="field-row">
+      <div class="field">
+        <%= form.label :item_id, "Item" %>
+        <%= form.collection_select :item_id, @items, :id, ->(item) { "#{item.sku} · #{item.name}" },
+              { prompt: "Choose an item" }, required: true %>
+      </div>
+
+      <div class="field">
+        <%= form.label :warehouse_id, "Warehouse" %>
+        <%= form.collection_select :warehouse_id, @warehouses, :id, :name, { prompt: "Choose a warehouse" }, required: true %>
+      </div>
+
+      <div class="field">
+        <%= form.label :quantity %>
+        <%= form.number_field :quantity, min: 1, step: 1, required: true %>
+      </div>
+    </div>
+
+    <div class="field">
+      <%= form.label :reason, "Reason (optional)" %>
+      <%= form.text_field :reason %>
+    </div>
+
+    <%= form.submit "Issue", class: "button" %>
+  <% end %>
+</section>
