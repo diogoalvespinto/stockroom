@@ -24,6 +24,25 @@
   </head>
 
   <body>
-    <%= yield %>
+    <header class="topbar">
+      <%= link_to "Stockroom", root_path, class: "brand" %>
+      <% if authenticated? %>
+        <nav class="nav">
+          <%= nav_link "Stock", root_path %>
+        </nav>
+        <div class="account">
+          <span><%= Current.user.email_address %></span>
+          <%= button_to "Sign out", session_path, method: :delete, class: "button button-quiet" %>
+        </div>
+      <% end %>
+    </header>
+
+    <main class="page">
+      <% flash.each do |type, message| %>
+        <%= tag.div message, class: "flash flash-#{type}", role: type == "alert" ? "alert" : "status" %>
+      <% end %>
+
+      <%= yield %>
+    </main>
   </body>
 </html>
