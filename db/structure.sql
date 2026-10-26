@@ -62,6 +62,39 @@ ALTER SEQUENCE public.items_id_seq OWNED BY public.items.id;
 
 
 --
+-- Name: lots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.lots (
+    id bigint NOT NULL,
+    item_id bigint NOT NULL,
+    lot_number character varying NOT NULL,
+    expiry_date date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: lots_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.lots_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: lots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.lots_id_seq OWNED BY public.lots.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -175,6 +208,13 @@ ALTER TABLE ONLY public.items ALTER COLUMN id SET DEFAULT nextval('public.items_
 
 
 --
+-- Name: lots id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lots ALTER COLUMN id SET DEFAULT nextval('public.lots_id_seq'::regclass);
+
+
+--
 -- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -209,6 +249,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 ALTER TABLE ONLY public.items
     ADD CONSTRAINT items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: lots lots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lots
+    ADD CONSTRAINT lots_pkey PRIMARY KEY (id);
 
 
 --
@@ -251,6 +299,13 @@ CREATE UNIQUE INDEX index_items_on_sku ON public.items USING btree (sku);
 
 
 --
+-- Name: index_lots_on_item_id_and_lot_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_lots_on_item_id_and_lot_number ON public.lots USING btree (item_id, lot_number);
+
+
+--
 -- Name: index_sessions_on_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -280,12 +335,21 @@ ALTER TABLE ONLY public.sessions
 
 
 --
+-- Name: lots fk_rails_8cf0a6d8ef; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lots
+    ADD CONSTRAINT fk_rails_8cf0a6d8ef FOREIGN KEY (item_id) REFERENCES public.items(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026190405'),
 ('20261026190404'),
 ('20261026190403'),
 ('20261026185950'),

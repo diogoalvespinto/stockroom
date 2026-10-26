@@ -3,6 +3,10 @@ require "rails_helper"
 RSpec.describe Item, type: :model do
   subject(:item) { build(:item) }
 
+  describe "associations" do
+    it { is_expected.to have_many(:lots).dependent(:restrict_with_error) }
+  end
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:sku) }
     it { is_expected.to validate_uniqueness_of(:sku).case_insensitive }

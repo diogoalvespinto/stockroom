@@ -1,4 +1,6 @@
 class Item < ApplicationRecord
+  has_many :lots, dependent: :restrict_with_error
+
   normalizes :sku, with: ->(sku) { sku.strip.upcase }
 
   validates :sku, presence: true, uniqueness: true
