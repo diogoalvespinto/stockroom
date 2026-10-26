@@ -14,6 +14,9 @@ Rails.application.routes.draw do
         resources :lots, only: :index
       end
       resources :receipts, :issues, :transfers, :adjustments, only: :create
+      get "stock", to: "stock#index"
+      get "reports/expiring_lots", to: "reports#expiring_lots"
+      get "reports/below_reorder_level", to: "reports#below_reorder_level"
 
       match "*path", to: "base#route_not_found", via: :all
     end
