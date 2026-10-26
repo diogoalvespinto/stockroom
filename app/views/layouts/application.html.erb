@@ -32,6 +32,7 @@
           <%= nav_link "Receive goods", new_receipt_path %>
           <%= nav_link "Issue goods", new_issue_path %>
           <%= nav_link "Expiring lots", expiring_report_path %>
+          <%= nav_link "Reorder", below_reorder_level_report_path %>
         </nav>
         <div class="account">
           <span><%= Current.user.email_address %></span>

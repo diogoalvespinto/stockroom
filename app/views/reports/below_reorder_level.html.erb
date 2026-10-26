@@ -1,0 +1,29 @@
+<% content_for :title, "Below reorder level · Stockroom" %>
+
+<h1>Below reorder level</h1>
+<p>Usable stock across all warehouses. Expired lots do not count.</p>
+
+<% if @rows.empty? %>
+  <p class="empty">Every item is at or above its reorder level.</p>
+<% else %>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="number">Usable stock</th>
+        <th class="number">Reorder level</th>
+        <th class="number">Shortfall</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @rows.each do |row| %>
+        <tr>
+          <td><%= row.item.sku %> · <%= row.item.name %></td>
+          <td class="number"><%= row.usable_quantity %> <%= row.item.unit_of_measure %></td>
+          <td class="number"><%= row.item.reorder_level %></td>
+          <td class="number"><%= tag.span(row.shortfall, class: "badge badge-danger") %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   resources :receipts, only: %i[new create]
   resources :issues, only: %i[new create]
   get "reports/expiring", to: "reports#expiring", as: :expiring_report
+  get "reports/below-reorder-level", to: "reports#below_reorder_level", as: :below_reorder_level_report
 
   namespace :api, defaults: { format: :json } do
     namespace :v1 do
