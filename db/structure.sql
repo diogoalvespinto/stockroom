@@ -27,6 +27,41 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.items (
+    id bigint NOT NULL,
+    sku character varying NOT NULL,
+    name character varying NOT NULL,
+    unit_of_measure character varying NOT NULL,
+    reorder_level integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT items_reorder_level_not_negative CHECK ((reorder_level >= 0))
+);
+
+
+--
+-- Name: items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.items_id_seq OWNED BY public.items.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -133,6 +168,13 @@ ALTER SEQUENCE public.warehouses_id_seq OWNED BY public.warehouses.id;
 
 
 --
+-- Name: items id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items ALTER COLUMN id SET DEFAULT nextval('public.items_id_seq'::regclass);
+
+
+--
 -- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -159,6 +201,14 @@ ALTER TABLE ONLY public.warehouses ALTER COLUMN id SET DEFAULT nextval('public.w
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: items items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items
+    ADD CONSTRAINT items_pkey PRIMARY KEY (id);
 
 
 --
@@ -191,6 +241,13 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.warehouses
     ADD CONSTRAINT warehouses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_items_on_sku; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_items_on_sku ON public.items USING btree (sku);
 
 
 --
@@ -229,6 +286,7 @@ ALTER TABLE ONLY public.sessions
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026190404'),
 ('20261026190403'),
 ('20261026185950'),
 ('20261026185949');
