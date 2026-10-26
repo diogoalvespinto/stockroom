@@ -1,0 +1,44 @@
+<% content_for :title, "Stock on hand · Stockroom" %>
+
+<div class="toolbar">
+  <h1>Stock on hand</h1>
+
+  <%= form_with url: root_path, method: :get, data: { controller: "auto-submit", turbo_frame: "stock", turbo_action: "advance" } do |form| %>
+    <div class="field">
+      <%= form.label :warehouse_id, "Warehouse" %>
+      <%= form.collection_select :warehouse_id, @warehouses, :id, :name,
+            { include_blank: "All warehouses", selected: @warehouse&.id },
+            data: { action: "auto-submit#submit" } %>
+    </div>
+    <%= form.submit "Filter", name: nil, class: "button", data: { auto_submit_target: "button" } %>
+  <% end %>
+</div>
+
+<%= turbo_frame_tag "stock" do %>
+  <% if @rows.empty? %>
+    <p class="empty">No stock on hand.</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Warehouse</th>
+          <th>Item</th>
+          <th>Lot</th>
+          <th>Expiry</th>
+          <th class="number">Quantity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @rows.each do |row| %>
+          <tr>
+            <td><%= row.warehouse.code %></td>
+            <td><%= row.item.sku %> · <%= row.item.name %></td>
+            <td><%= row.lot.lot_number %></td>
+            <td><%= expiry_label(row.lot) %></td>
+            <td class="number"><%= row.quantity %> <%= row.item.unit_of_measure %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+<% end %>
