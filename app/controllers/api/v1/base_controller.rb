@@ -42,6 +42,10 @@ module Api
           render_error :unauthorized, "unauthorized", "A valid API token is required"
         end
 
+        def render_movements(movements)
+          render json: { movements: movements.map { |movement| MovementSerializer.new(movement) } }, status: :created
+        end
+
         def render_error(status, code, message, details: nil)
           render json: { error: { code: code, message: message, details: details }.compact }, status: status
         end

@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       resources :items, only: :index do
         resources :lots, only: :index
       end
+      resources :receipts, :issues, :transfers, :adjustments, only: :create
 
       match "*path", to: "base#route_not_found", via: :all
     end
