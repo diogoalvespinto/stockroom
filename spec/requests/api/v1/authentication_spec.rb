@@ -34,6 +34,15 @@ RSpec.describe "api authentication", type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it "answers a malformed json body with the json error format" do
+    post api_v1_issues_path, params: '{"item_id":',
+      headers: api_headers(api_token.token, idempotency_key: "k-1").merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:bad_request)
+    expect(response.media_type).to eq("application/json")
+    expect(error_code).to eq("malformed_json")
+  end
+
   it "answers unknown api paths with the json error format" do
     get "/api/v1/nowhere", headers: api_headers(api_token.token)
 

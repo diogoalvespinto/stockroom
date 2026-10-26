@@ -5,6 +5,10 @@ module Api
 
       before_action :authenticate
 
+      rescue_from ActionDispatch::Http::Parameters::ParseError do
+        render_error :bad_request, "malformed_json", "The request body is not valid JSON"
+      end
+
       rescue_from ActionController::ParameterMissing do |error|
         render_error :bad_request, "parameter_missing", error.message
       end
