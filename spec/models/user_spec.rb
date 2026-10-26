@@ -6,6 +6,7 @@ RSpec.describe User, type: :model do
   describe "associations" do
     it { is_expected.to have_many(:sessions).dependent(:destroy) }
     it { is_expected.to have_many(:api_tokens).dependent(:destroy) }
+    it { is_expected.to have_many(:idempotency_keys).dependent(:delete_all) }
     it { is_expected.to have_many(:stock_movements).dependent(:restrict_with_error) }
   end
 

@@ -88,6 +88,40 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: idempotency_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.idempotency_keys (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    key character varying NOT NULL,
+    request_digest character varying NOT NULL,
+    response_status integer,
+    response_body text,
+    created_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: idempotency_keys_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.idempotency_keys_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: idempotency_keys_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.idempotency_keys_id_seq OWNED BY public.idempotency_keys.id;
+
+
+--
 -- Name: items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -309,6 +343,13 @@ ALTER TABLE ONLY public.api_tokens ALTER COLUMN id SET DEFAULT nextval('public.a
 
 
 --
+-- Name: idempotency_keys id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idempotency_keys ALTER COLUMN id SET DEFAULT nextval('public.idempotency_keys_id_seq'::regclass);
+
+
+--
 -- Name: items id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -364,6 +405,14 @@ ALTER TABLE ONLY public.api_tokens
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: idempotency_keys idempotency_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idempotency_keys
+    ADD CONSTRAINT idempotency_keys_pkey PRIMARY KEY (id);
 
 
 --
@@ -434,6 +483,20 @@ CREATE UNIQUE INDEX index_api_tokens_on_token_digest ON public.api_tokens USING 
 --
 
 CREATE INDEX index_api_tokens_on_user_id ON public.api_tokens USING btree (user_id);
+
+
+--
+-- Name: index_idempotency_keys_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_idempotency_keys_on_created_at ON public.idempotency_keys USING btree (created_at);
+
+
+--
+-- Name: index_idempotency_keys_on_user_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_idempotency_keys_on_user_id_and_key ON public.idempotency_keys USING btree (user_id, key);
 
 
 --
@@ -539,6 +602,14 @@ ALTER TABLE ONLY public.lots
 
 
 --
+-- Name: idempotency_keys fk_rails_96c4cbd0a9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idempotency_keys
+    ADD CONSTRAINT fk_rails_96c4cbd0a9 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: stock_movements fk_rails_c399f74509; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -561,6 +632,7 @@ ALTER TABLE ONLY public.api_tokens
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026194646'),
 ('20261026194250'),
 ('20261026193404'),
 ('20261026191935'),

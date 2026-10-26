@@ -27,6 +27,10 @@ module Api
           details: { requested: error.requested, available: error.available }
       end
 
+      rescue_from IdempotentRequest::KeyReused do |error|
+        render_error :unprocessable_content, "idempotency_key_reused", error.message
+      end
+
       def route_not_found
         render_error :not_found, "not_found", "No route matches #{request.method} #{request.path}"
       end
@@ -42,8 +46,27 @@ module Api
           render_error :unauthorized, "unauthorized", "A valid API token is required"
         end
 
-        def render_movements(movements)
-          render json: { movements: movements.map { |movement| MovementSerializer.new(movement) } }, status: :created
+        def create_movements
+          idempotently do
+            movements = yield
+            [ 201, { movements: movements.map { |movement| MovementSerializer.new(movement) } }.to_json ]
+          end
+        end
+
+        def idempotently(&operation)
+          key = request.headers["Idempotency-Key"].to_s
+          unless key.length.between?(1, 255)
+            return render_error :bad_request, "invalid_idempotency_key",
+              "The Idempotency-Key header must be between 1 and 255 characters"
+          end
+
+          result = IdempotentRequest.new(user: current_user, key: key, fingerprint: request_fingerprint).call(&operation)
+          response.headers["Idempotent-Replayed"] = "true" if result.replayed
+          render json: result.body, status: result.status
+        end
+
+        def request_fingerprint
+          OpenSSL::Digest::SHA256.hexdigest([ request.method, request.path, request.raw_post ].join("\n"))
         end
 
         def render_error(status, code, message, details: nil)
