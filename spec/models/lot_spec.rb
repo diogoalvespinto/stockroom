@@ -17,4 +17,30 @@ RSpec.describe Lot, type: :model do
   describe "normalization" do
     it { is_expected.to normalize(:lot_number).from(" l2026-a ").to("L2026-A") }
   end
+
+  describe "#expired?" do
+    let(:today) { Date.new(2026, 10, 26) }
+
+    it "is expired once the expiry date has passed" do
+      lot = build(:lot, expiry_date: today - 1)
+
+      expect(lot).to be_expired(on: today)
+    end
+
+    it "is still usable on its expiry date" do
+      lot = build(:lot, expiry_date: today)
+
+      expect(lot).not_to be_expired(on: today)
+    end
+
+    it "never expires without an expiry date" do
+      lot = build(:lot, :without_expiry)
+
+      expect(lot).not_to be_expired(on: today)
+    end
+
+    it "compares against the current date by default" do
+      expect(build(:lot, :expired)).to be_expired
+    end
+  end
 end
