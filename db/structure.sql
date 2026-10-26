@@ -42,6 +42,40 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: api_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.api_tokens (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    name character varying NOT NULL,
+    token_digest character varying NOT NULL,
+    last_used_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: api_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.api_tokens_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: api_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.api_tokens_id_seq OWNED BY public.api_tokens.id;
+
+
+--
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -268,6 +302,13 @@ ALTER SEQUENCE public.warehouses_id_seq OWNED BY public.warehouses.id;
 
 
 --
+-- Name: api_tokens id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_tokens ALTER COLUMN id SET DEFAULT nextval('public.api_tokens_id_seq'::regclass);
+
+
+--
 -- Name: items id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -307,6 +348,14 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 --
 
 ALTER TABLE ONLY public.warehouses ALTER COLUMN id SET DEFAULT nextval('public.warehouses_id_seq'::regclass);
+
+
+--
+-- Name: api_tokens api_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_tokens
+    ADD CONSTRAINT api_tokens_pkey PRIMARY KEY (id);
 
 
 --
@@ -371,6 +420,20 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.warehouses
     ADD CONSTRAINT warehouses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_api_tokens_on_token_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_api_tokens_on_token_digest ON public.api_tokens USING btree (token_digest);
+
+
+--
+-- Name: index_api_tokens_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_api_tokens_on_user_id ON public.api_tokens USING btree (user_id);
 
 
 --
@@ -484,12 +547,21 @@ ALTER TABLE ONLY public.stock_movements
 
 
 --
+-- Name: api_tokens fk_rails_f16b5e0447; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_tokens
+    ADD CONSTRAINT fk_rails_f16b5e0447 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026194250'),
 ('20261026193404'),
 ('20261026191935'),
 ('20261026190406'),
