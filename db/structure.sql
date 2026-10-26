@@ -166,7 +166,8 @@ CREATE TABLE public.lots (
     lot_number character varying NOT NULL,
     expiry_date date,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    expiry_alerted_at timestamp(6) without time zone
 );
 
 
@@ -632,6 +633,7 @@ ALTER TABLE ONLY public.api_tokens
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026201028'),
 ('20261026194646'),
 ('20261026194250'),
 ('20261026193404'),

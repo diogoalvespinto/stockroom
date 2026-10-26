@@ -1,0 +1,9 @@
+<p>These lots still hold stock and expire within <%= FlagExpiringLotsJob::WINDOW_IN_DAYS %> days:</p>
+
+<ul>
+  <% @lots.each do |lot| %>
+    <li><%= lot.expiry_date.iso8601 %> · <%= lot.item.sku %> <%= lot.item.name %>, lot <%= lot.lot_number %></li>
+  <% end %>
+</ul>
+
+<p><%= link_to "See where they are", expiring_report_url %></p>
