@@ -5,6 +5,7 @@ RSpec.describe Lot, type: :model do
 
   describe "associations" do
     it { is_expected.to belong_to(:item) }
+    it { is_expected.to have_many(:stock_movements).dependent(:restrict_with_error) }
   end
 
   describe "validations" do

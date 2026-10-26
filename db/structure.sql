@@ -10,6 +10,33 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: stock_movement_kind; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.stock_movement_kind AS ENUM (
+    'receipt',
+    'issue',
+    'transfer_out',
+    'transfer_in',
+    'adjustment'
+);
+
+
+--
+-- Name: reject_stock_movement_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reject_stock_movement_changes() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'stock_movements is append-only: % is not allowed', TG_OP
+    USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -137,6 +164,44 @@ ALTER SEQUENCE public.sessions_id_seq OWNED BY public.sessions.id;
 
 
 --
+-- Name: stock_movements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stock_movements (
+    id bigint NOT NULL,
+    lot_id bigint NOT NULL,
+    warehouse_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    kind public.stock_movement_kind NOT NULL,
+    quantity integer NOT NULL,
+    reason text,
+    created_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT stock_movements_adjustment_has_reason CHECK (((kind <> 'adjustment'::public.stock_movement_kind) OR (btrim(COALESCE(reason, ''::text)) <> ''::text))),
+    CONSTRAINT stock_movements_quantity_not_zero CHECK ((quantity <> 0)),
+    CONSTRAINT stock_movements_quantity_sign_matches_kind CHECK ((((kind = ANY (ARRAY['receipt'::public.stock_movement_kind, 'transfer_in'::public.stock_movement_kind])) AND (quantity > 0)) OR ((kind = ANY (ARRAY['issue'::public.stock_movement_kind, 'transfer_out'::public.stock_movement_kind])) AND (quantity < 0)) OR (kind = 'adjustment'::public.stock_movement_kind)))
+);
+
+
+--
+-- Name: stock_movements_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.stock_movements_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: stock_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.stock_movements_id_seq OWNED BY public.stock_movements.id;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -222,6 +287,13 @@ ALTER TABLE ONLY public.sessions ALTER COLUMN id SET DEFAULT nextval('public.ses
 
 
 --
+-- Name: stock_movements id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements ALTER COLUMN id SET DEFAULT nextval('public.stock_movements_id_seq'::regclass);
+
+
+--
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -276,6 +348,14 @@ ALTER TABLE ONLY public.sessions
 
 
 --
+-- Name: stock_movements stock_movements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -313,6 +393,27 @@ CREATE INDEX index_sessions_on_user_id ON public.sessions USING btree (user_id);
 
 
 --
+-- Name: index_stock_movements_on_lot_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stock_movements_on_lot_id ON public.stock_movements USING btree (lot_id);
+
+
+--
+-- Name: index_stock_movements_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stock_movements_on_user_id ON public.stock_movements USING btree (user_id);
+
+
+--
+-- Name: index_stock_movements_on_warehouse_id_and_lot_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stock_movements_on_warehouse_id_and_lot_id ON public.stock_movements USING btree (warehouse_id, lot_id);
+
+
+--
 -- Name: index_users_on_email_address; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -327,11 +428,34 @@ CREATE UNIQUE INDEX index_warehouses_on_code ON public.warehouses USING btree (c
 
 
 --
+-- Name: stock_movements stock_movements_append_only; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER stock_movements_append_only BEFORE DELETE OR UPDATE ON public.stock_movements FOR EACH ROW EXECUTE FUNCTION public.reject_stock_movement_changes();
+
+
+--
+-- Name: stock_movements fk_rails_39b41d5ff7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT fk_rails_39b41d5ff7 FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);
+
+
+--
 -- Name: sessions fk_rails_758836b4f0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT fk_rails_758836b4f0 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: stock_movements fk_rails_866184c669; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT fk_rails_866184c669 FOREIGN KEY (lot_id) REFERENCES public.lots(id);
 
 
 --
@@ -343,12 +467,21 @@ ALTER TABLE ONLY public.lots
 
 
 --
+-- Name: stock_movements fk_rails_c399f74509; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT fk_rails_c399f74509 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026190406'),
 ('20261026190405'),
 ('20261026190404'),
 ('20261026190403'),
