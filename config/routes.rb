@@ -6,6 +6,9 @@ Rails.application.routes.draw do
   namespace :api, defaults: { format: :json } do
     namespace :v1 do
       resources :warehouses, only: :index
+      resources :items, only: :index do
+        resources :lots, only: :index
+      end
 
       match "*path", to: "base#route_not_found", via: :all
     end
