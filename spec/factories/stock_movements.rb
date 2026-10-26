@@ -14,11 +14,13 @@ FactoryBot.define do
     trait :transfer_out do
       kind { :transfer_out }
       quantity { -1 }
+      transfer_id { SecureRandom.uuid }
     end
 
     trait :transfer_in do
       kind { :transfer_in }
       quantity { 1 }
+      transfer_id { SecureRandom.uuid }
     end
 
     trait :adjustment do

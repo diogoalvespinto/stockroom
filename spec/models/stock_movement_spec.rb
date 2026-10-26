@@ -48,6 +48,22 @@ RSpec.describe StockMovement, type: :model do
       it { is_expected.to validate_presence_of(:reason) }
       it { is_expected.to allow_values(-5, 5).for(:quantity) }
     end
+
+    %i[transfer_out transfer_in].each do |kind|
+      context "when the movement is a #{kind}" do
+        subject(:movement) { build(:stock_movement, kind) }
+
+        it { is_expected.to validate_presence_of(:transfer_id) }
+      end
+    end
+
+    %i[receipt issue adjustment].each do |kind|
+      context "when the movement is a #{kind}" do
+        subject(:movement) { build(:stock_movement, kind: kind) }
+
+        it { is_expected.to validate_absence_of(:transfer_id) }
+      end
+    end
   end
 
   describe "append-only ledger" do
@@ -85,6 +101,13 @@ RSpec.describe StockMovement, type: :model do
 
       expect { movement.save!(validate: false) }
         .to raise_error(ActiveRecord::CheckViolation, /stock_movements_adjustment_has_reason/)
+    end
+
+    it "rejects a transfer leg without a transfer id" do
+      movement = build(:stock_movement, :transfer_out, transfer_id: nil)
+
+      expect { movement.save!(validate: false) }
+        .to raise_error(ActiveRecord::CheckViolation, /stock_movements_transfer_id_matches_kind/)
     end
   end
 end

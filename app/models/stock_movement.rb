@@ -15,6 +15,8 @@ class StockMovement < ApplicationRecord
   validates :quantity, numericality: { greater_than: 0 }, if: -> { receipt? || transfer_in? }
   validates :quantity, numericality: { less_than: 0 }, if: -> { issue? || transfer_out? }
   validates :reason, presence: true, if: :adjustment?
+  validates :transfer_id, presence: true, if: -> { transfer_out? || transfer_in? }
+  validates :transfer_id, absence: true, unless: -> { transfer_out? || transfer_in? }
 
   def readonly?
     persisted? || super

@@ -176,9 +176,11 @@ CREATE TABLE public.stock_movements (
     quantity integer NOT NULL,
     reason text,
     created_at timestamp(6) without time zone NOT NULL,
+    transfer_id uuid,
     CONSTRAINT stock_movements_adjustment_has_reason CHECK (((kind <> 'adjustment'::public.stock_movement_kind) OR (btrim(COALESCE(reason, ''::text)) <> ''::text))),
     CONSTRAINT stock_movements_quantity_not_zero CHECK ((quantity <> 0)),
-    CONSTRAINT stock_movements_quantity_sign_matches_kind CHECK ((((kind = ANY (ARRAY['receipt'::public.stock_movement_kind, 'transfer_in'::public.stock_movement_kind])) AND (quantity > 0)) OR ((kind = ANY (ARRAY['issue'::public.stock_movement_kind, 'transfer_out'::public.stock_movement_kind])) AND (quantity < 0)) OR (kind = 'adjustment'::public.stock_movement_kind)))
+    CONSTRAINT stock_movements_quantity_sign_matches_kind CHECK ((((kind = ANY (ARRAY['receipt'::public.stock_movement_kind, 'transfer_in'::public.stock_movement_kind])) AND (quantity > 0)) OR ((kind = ANY (ARRAY['issue'::public.stock_movement_kind, 'transfer_out'::public.stock_movement_kind])) AND (quantity < 0)) OR (kind = 'adjustment'::public.stock_movement_kind))),
+    CONSTRAINT stock_movements_transfer_id_matches_kind CHECK (((kind = ANY (ARRAY['transfer_out'::public.stock_movement_kind, 'transfer_in'::public.stock_movement_kind])) = (transfer_id IS NOT NULL)))
 );
 
 
@@ -407,6 +409,13 @@ CREATE INDEX index_stock_movements_on_lot_id ON public.stock_movements USING btr
 
 
 --
+-- Name: index_stock_movements_on_transfer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stock_movements_on_transfer_id ON public.stock_movements USING btree (transfer_id) WHERE (transfer_id IS NOT NULL);
+
+
+--
 -- Name: index_stock_movements_on_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -481,6 +490,7 @@ ALTER TABLE ONLY public.stock_movements
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026193404'),
 ('20261026191935'),
 ('20261026190406'),
 ('20261026190405'),
