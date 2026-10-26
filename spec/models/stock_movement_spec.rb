@@ -65,6 +65,11 @@ RSpec.describe StockMovement, type: :model do
       expect { described_class.where(id: movement.id).update_all(quantity: 5) }
         .to raise_error(ActiveRecord::StatementInvalid, /append-only: UPDATE is not allowed/)
     end
+
+    it "rejects a delete that bypasses the model" do
+      expect { described_class.where(id: movement.id).delete_all }
+        .to raise_error(ActiveRecord::StatementInvalid, /append-only: DELETE is not allowed/)
+    end
   end
 
   describe "database constraints" do
