@@ -9,6 +9,9 @@ Stock is received in lots with an expiry date, issued first-expiry-first-out, mo
 warehouses and adjusted with a reason. Every change is a row in an append-only ledger, and
 the current stock is always derived from it.
 
+It was built with Claude Code: I planned it and made the design decisions, and Claude Code
+wrote most of the code. See [How it was built](#how-it-was-built).
+
 ## Contents
 
 - [Domain rules](#domain-rules)
@@ -16,7 +19,8 @@ the current stock is always derived from it.
 - [Running it](#running-it)
 - [API](#api)
 - [Testing strategy](#testing-strategy)
-- [What I'd do next](#what-id-do-next)
+- [How it was built](#how-it-was-built)
+- [Next steps](#next-steps)
 
 ## Domain rules
 
@@ -58,8 +62,8 @@ and check constraints, including one that ties the sign of the quantity to the m
 Validations give good error messages; constraints hold even when the model is bypassed. The
 model specs test both, saving with `validate: false` to prove the constraint fires.
 
-**The cost is that balances are sums.** I measured it with one million movements over 20,000
-lots, on a laptop with the data cached in memory:
+**The cost is that balances are sums.** It was measured with one million movements over
+20,000 lots, on a laptop with the data cached in memory:
 
 | Query | Result |
 | --- | --- |
@@ -69,9 +73,9 @@ lots, on a laptop with the data cached in memory:
 | Items below reorder level | 38 ms |
 | Stock on hand, every lot in every warehouse | 522 ms, mostly building 20,000 rows |
 
-Before measuring I weighed snapshots, a materialized view and a trigger-maintained balance
-table. I rejected snapshots because a movement id is assigned at insert time, not at commit
-time, so a slow transaction can be missed by a snapshot's cut-off. A materialized view is
+Before measuring, we weighed snapshots, a materialized view and a trigger-maintained balance
+table. Snapshots were ruled out because a movement id is assigned at insert time, not at
+commit time, so a slow transaction can be missed by a snapshot's cut-off. A materialized view is
 stale between refreshes, so it can never decide whether an issue may proceed. A projection
 table maintained by a trigger would be fast, but it is a stored balance. The numbers above
 did not justify any of them.
@@ -88,7 +92,7 @@ it reads the balances: without the lock, both threads issue 7 from a lot holding
 lot ends at −4. With the lock, the second thread waits, sees 3 and is refused.
 
 Locking per lot means two issues of the same item in different warehouses also wait for each
-other. That keeps the design simple; see [What I'd do next](#what-id-do-next).
+other. That keeps the design simple; see [Next steps](#next-steps).
 
 ### Idempotent API
 
@@ -195,13 +199,13 @@ SHOW_BROWSER=1 bin/rspec spec/system   # watch the browser specs in a visible Ch
 | System | 15 | UI flows with `rack_test`; Turbo Frames and Stimulus in headless Chrome |
 | Reports, forms, jobs, mailers and others | 40 | query objects, form objects, the daily job, emails, `recurring.yml`, seeds and the rake task |
 
-Principles I followed:
+Principles followed:
 
 - **Red before green.** Each important spec was seen failing for the right reason first: the
   concurrency spec without the lock, the idempotency spec without the key, the atomic transfer
   without its transaction.
-- **Specs that can fail.** When a spec passed on the first run, I broke the code on purpose
-  to confirm the spec catches it.
+- **Specs that can fail.** When a spec passed on its first run, the code was broken on
+  purpose to confirm the spec catches it.
 - **Committed data only where needed.** Concurrency specs run outside the test transaction,
   because each thread has its own connection, and clean up with `TRUNCATE`. `DELETE` is
   blocked by the trigger.
@@ -218,7 +222,29 @@ measured and the threshold is a floor rather than a target.
 **CI** (GitHub Actions) runs RuboCop, Brakeman, bundler-audit, importmap audit and the full
 suite against a PostgreSQL 18 service. The coverage report is kept as a build artifact.
 
-## What I'd do next
+## How it was built
+
+Stockroom was built with [Claude Code](https://claude.com/claude-code), Anthropic's coding
+agent, in phases that I reviewed one at a time.
+
+- **My part.** The domain and its rules come from my experience with stock management at
+  work. The code is written from scratch and shares nothing with any employer's codebase. I
+  wrote the brief: the data model, the business rules, the stack, the test-first workflow and
+  a plan in seven phases, from the app skeleton to CI. I reviewed every phase before the next
+  one started, made the design decisions below, tested the UI by hand and wrote some of the
+  specs.
+- **Claude Code's part.** Most of the code, the specs, the CI workflow and this README. It
+  proposed the options for each decision with their trade-offs and ran the benchmarks.
+
+The decisions we discussed:
+
+| Decision | Options weighed | Outcome |
+| --- | --- | --- |
+| Current stock | a mutable balance, or deriving it from the movements | the ledger only, as an audit trail |
+| Protecting the ledger | the model alone, or a PL/pgSQL trigger as well | the trigger, so `update_all` and raw SQL cannot rewrite history either |
+| Stock at volume | snapshots, a materialized view, a trigger-maintained balance table, or the plain sum | the plain sum, after benchmarking it at one million movements |
+
+## Next steps
 
 - **Paginate the stock list.** Listing all 20,000 lots takes half a second, almost all of it
   building rows that no one could read on one page.
