@@ -9,6 +9,10 @@ RSpec.describe User, type: :model do
 
   describe "validations" do
     it { is_expected.to have_secure_password }
+    it { is_expected.to validate_presence_of(:email_address) }
+    it { is_expected.to validate_uniqueness_of(:email_address).case_insensitive }
+    it { is_expected.to allow_value("ana@example.com").for(:email_address) }
+    it { is_expected.not_to allow_value("ana@", "ana.example.com").for(:email_address) }
   end
 
   describe "normalization" do
