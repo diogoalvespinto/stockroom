@@ -52,20 +52,20 @@ RSpec.describe "Stock on hand", type: :system do
   context "with more lots than fit on a page" do
     before { stub_const("StockOnHandReport::PER_PAGE", 1) }
 
-    it "pages forwards and back" do
+    it "moves between numbered pages" do
       sign_in_as(user)
 
       expect(page).to have_text("G-1")
       expect(page).to have_no_text("G-2")
-      expect(page).to have_no_link("Previous")
+      expect(page).to have_css("[aria-current=page]", text: "1")
 
-      click_on "Next"
+      click_link "2"
 
       expect(page).to have_text("G-2")
       expect(page).to have_no_text("G-1")
-      expect(page).to have_no_link("Next")
+      expect(page).to have_css("[aria-current=page]", text: "2")
 
-      click_on "Previous"
+      click_link "1"
 
       expect(page).to have_text("G-1")
     end
@@ -76,7 +76,7 @@ RSpec.describe "Stock on hand", type: :system do
       sign_in_as(user)
       select "Porto", from: "Warehouse"
       click_on "Filter"
-      click_on "Next"
+      click_link "2"
 
       expect(page).to have_text("G-3")
       expect(page).to have_no_text("G-1")
@@ -93,7 +93,7 @@ RSpec.describe "Stock on hand", type: :system do
       sign_in_as(user)
       page.execute_script("document.querySelector('h1').dataset.untouched = 'yes'")
 
-      click_on "Next"
+      click_link "2"
 
       expect(page).to have_text("G-2")
       expect(page).to have_current_path(root_path(page: 2))

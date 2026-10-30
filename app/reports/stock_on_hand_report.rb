@@ -7,11 +7,21 @@ class StockOnHandReport
     end
   end
 
-  Page = Data.define(:rows, :number, :last) do
-    alias_method :last?, :last
+  Page = Data.define(:rows, :number, :total_pages) do
+    def last?
+      number >= total_pages
+    end
 
-    def first?
-      number == 1
+    def window(around: 3)
+      shown = [ 1, *(number - around)..(number + around), total_pages ].select { |n| n.between?(1, total_pages) }.uniq.sort
+
+      shown.flat_map.with_index do |n, index|
+        case index.zero? ? 1 : n - shown[index - 1]
+        when 2 then [ n - 1, n ]
+        when 3.. then [ :gap, n ]
+        else [ n ]
+        end
+      end
     end
   end
 
@@ -33,9 +43,10 @@ class StockOnHandReport
   end
 
   def page(number, per: PER_PAGE)
-    found = build(sums(in_display_order.limit(per + 1).offset((number - 1) * per)))
+    found = sums(in_display_order.limit(per).offset((number - 1) * per), Arel.sql("COUNT(*) OVER ()"))
+    total = found.first&.last || count
 
-    Page.new(rows: found.first(per), number: number, last: found.size <= per)
+    Page.new(rows: build(found), number: number, total_pages: total.fdiv(per).ceil)
   end
 
   def after(position, per: PER_PAGE)
@@ -62,15 +73,19 @@ class StockOnHandReport
         .merge(Lot.fefo)
     end
 
-    def sums(scope)
-      scope.pluck("stock_movements.warehouse_id", "stock_movements.lot_id", "stock_movements.quantity")
+    def sums(scope, *extra)
+      scope.pluck("stock_movements.warehouse_id", "stock_movements.lot_id", "stock_movements.quantity", *extra)
+    end
+
+    def count
+      StockMovement.from(balances.select(:warehouse_id, :lot_id), :stock_movements).count
     end
 
     def build(sums)
       warehouses = Warehouse.where(id: sums.map(&:first)).index_by(&:id)
       lots = Lot.includes(:item).where(id: sums.map(&:second)).index_by(&:id)
 
-      sums.map do |warehouse_id, lot_id, quantity|
+      sums.map do |warehouse_id, lot_id, quantity, *|
         Row.new(warehouse: warehouses.fetch(warehouse_id), lot: lots.fetch(lot_id), quantity: quantity)
       end
     end

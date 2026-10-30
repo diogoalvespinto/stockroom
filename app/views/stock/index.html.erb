@@ -42,14 +42,16 @@
     </table>
   <% end %>
 
-  <% unless @page.first? && @page.last? %>
+  <% if @page.total_pages > 1 %>
     <nav class="pagination" aria-label="Pages">
-      <% unless @page.first? %>
-        <%= link_to "Previous", root_path(warehouse_id: @warehouse&.id, page: @page.number - 1), rel: "prev" %>
-      <% end %>
-      <span>Page <%= @page.number %></span>
-      <% unless @page.last? %>
-        <%= link_to "Next", root_path(warehouse_id: @warehouse&.id, page: @page.number + 1), rel: "next" %>
+      <% @page.window.each do |item| %>
+        <% if item == :gap %>
+          <span class="gap">…</span>
+        <% elsif item == @page.number %>
+          <span aria-current="page"><%= item %></span>
+        <% else %>
+          <%= link_to item, root_path(warehouse_id: @warehouse&.id, page: item) %>
+        <% end %>
       <% end %>
     </nav>
   <% end %>
