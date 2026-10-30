@@ -68,7 +68,7 @@ model specs test both, saving with `validate: false` to prove the constraint fir
 | Query | Result |
 | --- | --- |
 | FEFO balances of an item's 200 lots | 10,600 → 650 buffer reads after adding `INCLUDE (quantity)` to the `(warehouse_id, lot_id)` index (an index-only scan) |
-| Stock on hand, one page of 50 lots | 105 ms in the UI, 7 ms through the API (see [Paginating the stock list](#paginating-the-stock-list)) |
+| Stock on hand, one page of 50 lots | 110 ms in the UI, 7 ms through the API (see [Paginating the stock list](#paginating-the-stock-list)) |
 | Lots expiring within 30 days | 30 ms |
 | Items below reorder level | 38 ms |
 
@@ -113,8 +113,11 @@ of the list, so the UI and the API page differently:
 
 - **The UI uses an offset.** People read stock by warehouse, SKU and expiry. That is not the
   order of any index, so Postgres sums and sorts every lot before it can cut a page, with an
-  offset or a cursor alike. Skipping sorted rows is cheap, nobody jumps to page 7 of a stock
-  list, and a lot running out between two clicks costs a person a refresh at most.
+  offset or a cursor alike. Skipping sorted rows is cheap, and a lot running out between two
+  clicks costs a person a refresh at most. The page links read `1 … 12 13 14 15 16 17 18 … 300`,
+  so the UI needs the number of lots in stock: `COUNT(*) OVER ()` counts them in the same pass
+  as the page, for about 5% more time, where a separate `COUNT` query would sum everything
+  twice.
 - **The API uses a cursor.** A system syncing stock does not care about the order, so the API
   sorts by `(warehouse_id, lot_id)`, the order of the balance index. With
   `WHERE (warehouse_id, lot_id) > (last seen)`, Postgres reads that index from the cursor, sums
@@ -125,8 +128,8 @@ Measured through `StockOnHandReport`, with one million movements over 20,000 lot
 
 | | Before | Page 1 | Page 400 |
 | --- | --- | --- | --- |
-| UI, every warehouse (offset) | 510 ms | 105 ms | 128 ms |
-| UI, one warehouse (offset) | 126 ms | 19 ms | 27 ms (page 80) |
+| UI, every warehouse (offset) | 510 ms | 110 ms | 133 ms |
+| UI, one warehouse (offset) | 126 ms | 22 ms | 29 ms (page 80) |
 | API (cursor) | 510 ms | 7 ms | 4 ms |
 
 The shape of the query mattered as much as the kind of pagination: summing the movements in
@@ -228,7 +231,7 @@ SHOW_BROWSER=1 bin/rspec spec/system   # watch the browser specs in a visible Ch
 | Services | 50 | every business rule: FEFO, expiry, atomic transfers and idempotency, with two thread-based concurrency specs |
 | Requests | 52 | the API contract, authentication, the error format and idempotent replays, plus the sign-in and password reset flows |
 | System | 19 | UI flows with `rack_test`; Turbo Frames and Stimulus in headless Chrome |
-| Reports, forms, jobs, mailers and others | 40 | query objects, form objects, the daily job, emails, `recurring.yml`, seeds and the rake task |
+| Reports, forms, jobs, mailers and others | 49 | query objects, form objects, the daily job, emails, `recurring.yml`, seeds and the rake task |
 
 Principles followed:
 
