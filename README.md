@@ -68,10 +68,9 @@ model specs test both, saving with `validate: false` to prove the constraint fir
 | Query | Result |
 | --- | --- |
 | FEFO balances of an item's 200 lots | 10,600 → 650 buffer reads after adding `INCLUDE (quantity)` to the `(warehouse_id, lot_id)` index (an index-only scan) |
-| Stock on hand, one warehouse | 94 ms |
+| Stock on hand, one page of 50 lots | 105 ms in the UI, 7 ms through the API (see [Paginating the stock list](#paginating-the-stock-list)) |
 | Lots expiring within 30 days | 30 ms |
 | Items below reorder level | 38 ms |
-| Stock on hand, every lot in every warehouse | 522 ms, mostly building 20,000 rows |
 
 Before measuring, we weighed snapshots, a materialized view and a trigger-maintained balance
 table. Snapshots were ruled out because a movement id is assigned at insert time, not at
@@ -105,6 +104,34 @@ movements. As a result:
 - a failed request rolls back its key, so the client can retry once the cause is fixed;
 - reusing a key with a different body is refused;
 - keys are scoped per user and purged after 24 hours.
+
+### Paginating the stock list
+
+The stock list is a `SUM` grouped by warehouse and lot, and Postgres only knows whether a lot
+has stock after summing its movements. Which kind of pagination pays off depends on the order
+of the list, so the UI and the API page differently:
+
+- **The UI uses an offset.** People read stock by warehouse, SKU and expiry. That is not the
+  order of any index, so Postgres sums and sorts every lot before it can cut a page, with an
+  offset or a cursor alike. Skipping sorted rows is cheap, nobody jumps to page 7 of a stock
+  list, and a lot running out between two clicks costs a person a refresh at most.
+- **The API uses a cursor.** A system syncing stock does not care about the order, so the API
+  sorts by `(warehouse_id, lot_id)`, the order of the balance index. With
+  `WHERE (warehouse_id, lot_id) > (last seen)`, Postgres reads that index from the cursor, sums
+  lot by lot and stops after one page. A client walking every page cannot miss a lot because
+  one on an earlier page ran out, which a spec checks.
+
+Measured through `StockOnHandReport`, with one million movements over 20,000 lots:
+
+| | Before | Page 1 | Page 400 |
+| --- | --- | --- | --- |
+| UI, every warehouse (offset) | 510 ms | 105 ms | 128 ms |
+| UI, one warehouse (offset) | 126 ms | 19 ms | 27 ms (page 80) |
+| API (cursor) | 510 ms | 7 ms | 4 ms |
+
+The shape of the query mattered as much as the kind of pagination: summing the movements in
+a subquery before joining warehouses, lots and items made the offset query five times faster
+than joining first.
 
 ### Other choices
 
@@ -199,8 +226,8 @@ SHOW_BROWSER=1 bin/rspec spec/system   # watch the browser specs in a visible Ch
 | --- | --- | --- |
 | Models | 72 | validations and associations (shoulda-matchers), plus the database constraints and the append-only trigger with validations bypassed |
 | Services | 50 | every business rule: FEFO, expiry, atomic transfers and idempotency, with two thread-based concurrency specs |
-| Requests | 49 | the API contract, authentication, the error format and idempotent replays, plus the sign-in and password reset flows |
-| System | 15 | UI flows with `rack_test`; Turbo Frames and Stimulus in headless Chrome |
+| Requests | 52 | the API contract, authentication, the error format and idempotent replays, plus the sign-in and password reset flows |
+| System | 19 | UI flows with `rack_test`; Turbo Frames and Stimulus in headless Chrome |
 | Reports, forms, jobs, mailers and others | 40 | query objects, form objects, the daily job, emails, `recurring.yml`, seeds and the rake task |
 
 Principles followed:
@@ -250,8 +277,6 @@ The decisions we discussed:
 
 ## Next steps
 
-- **Paginate the stock list.** Listing all 20,000 lots takes half a second, almost all of it
-  building rows that no one could read on one page.
 - **Finer locks.** `pg_advisory_xact_lock` on (warehouse, lot) would let issues of the same item
   in different warehouses run in parallel, if contention ever showed up.
 - **Manage API tokens in the UI**, with revocation and last-used dates (already recorded).
