@@ -11,20 +11,31 @@ class StockOnHandReport
   end
 
   def rows
-    balances = movements.group(:warehouse_id, :lot_id).having("SUM(quantity) > 0").sum(:quantity)
-    warehouses = Warehouse.where(id: balances.keys.map(&:first)).index_by(&:id)
-    lots = Lot.includes(:item).where(id: balances.keys.map(&:last)).index_by(&:id)
-
-    balances
-      .map { |(warehouse_id, lot_id), quantity| Row.new(warehouse: warehouses.fetch(warehouse_id), lot: lots.fetch(lot_id), quantity: quantity) }
-      .sort_by { |row| [ row.warehouse.code, row.item.sku, row.lot.expiry_date ? 0 : 1, row.lot.expiry_date.to_s, row.lot.id ] }
+    build(in_display_order.pluck("stock_movements.warehouse_id", "stock_movements.lot_id", "stock_movements.quantity"))
   end
 
   private
-    def movements
-      scope = StockMovement.all
+    def balances
+      scope = StockMovement.group(:warehouse_id, :lot_id).having("SUM(quantity) > 0")
       scope = scope.where(warehouse: @warehouse) if @warehouse
       scope = scope.where(lot: @lots) if @lots
       scope
+    end
+
+    def in_display_order
+      StockMovement
+        .from(balances.select(:warehouse_id, :lot_id, "SUM(quantity) AS quantity"), :stock_movements)
+        .joins(:warehouse, lot: :item)
+        .order("warehouses.code", "items.sku")
+        .merge(Lot.fefo)
+    end
+
+    def build(sums)
+      warehouses = Warehouse.where(id: sums.map(&:first)).index_by(&:id)
+      lots = Lot.includes(:item).where(id: sums.map(&:second)).index_by(&:id)
+
+      sums.map do |warehouse_id, lot_id, quantity|
+        Row.new(warehouse: warehouses.fetch(warehouse_id), lot: lots.fetch(lot_id), quantity: quantity)
+      end
     end
 end
