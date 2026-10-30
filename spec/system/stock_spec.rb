@@ -48,4 +48,56 @@ RSpec.describe "Stock on hand", type: :system do
     expect(page).to have_current_path(root_path(warehouse_id: porto.id))
     expect(page).to have_css("h1[data-untouched=yes]")
   end
+
+  context "with more lots than fit on a page" do
+    before { stub_const("StockOnHandReport::PER_PAGE", 1) }
+
+    it "pages forwards and back" do
+      sign_in_as(user)
+
+      expect(page).to have_text("G-1")
+      expect(page).to have_no_text("G-2")
+      expect(page).to have_no_link("Previous")
+
+      click_on "Next"
+
+      expect(page).to have_text("G-2")
+      expect(page).to have_no_text("G-1")
+      expect(page).to have_no_link("Next")
+
+      click_on "Previous"
+
+      expect(page).to have_text("G-1")
+    end
+
+    it "keeps the warehouse filter from page to page" do
+      create(:stock_movement, warehouse: porto, quantity: 3,
+        lot: create(:lot, item: gloves, lot_number: "G-3", expiry_date: Date.current + 60))
+      sign_in_as(user)
+      select "Porto", from: "Warehouse"
+      click_on "Filter"
+      click_on "Next"
+
+      expect(page).to have_text("G-3")
+      expect(page).to have_no_text("G-1")
+    end
+
+    it "shows the first page for a page number it does not understand" do
+      sign_in_as(user)
+      visit root_path(page: "last")
+
+      expect(page).to have_text("G-1")
+    end
+
+    it "pages in place and keeps the page in the address", :js do
+      sign_in_as(user)
+      page.execute_script("document.querySelector('h1').dataset.untouched = 'yes'")
+
+      click_on "Next"
+
+      expect(page).to have_text("G-2")
+      expect(page).to have_current_path(root_path(page: 2))
+      expect(page).to have_css("h1[data-untouched=yes]")
+    end
+  end
 end

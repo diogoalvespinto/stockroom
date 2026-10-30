@@ -7,6 +7,14 @@ class StockOnHandReport
     end
   end
 
+  Page = Data.define(:rows, :number, :last) do
+    alias_method :last?, :last
+
+    def first?
+      number == 1
+    end
+  end
+
   CursorPage = Data.define(:rows, :last) do
     alias_method :last?, :last
 
@@ -21,7 +29,13 @@ class StockOnHandReport
   end
 
   def rows
-    build(in_display_order.pluck("stock_movements.warehouse_id", "stock_movements.lot_id", "stock_movements.quantity"))
+    build(sums(in_display_order))
+  end
+
+  def page(number, per: PER_PAGE)
+    found = build(sums(in_display_order.limit(per + 1).offset((number - 1) * per)))
+
+    Page.new(rows: found.first(per), number: number, last: found.size <= per)
   end
 
   def after(position, per: PER_PAGE)
@@ -46,6 +60,10 @@ class StockOnHandReport
         .joins(:warehouse, lot: :item)
         .order("warehouses.code", "items.sku")
         .merge(Lot.fefo)
+    end
+
+    def sums(scope)
+      scope.pluck("stock_movements.warehouse_id", "stock_movements.lot_id", "stock_movements.quantity")
     end
 
     def build(sums)
