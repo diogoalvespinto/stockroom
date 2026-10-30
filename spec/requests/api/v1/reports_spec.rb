@@ -22,6 +22,42 @@ RSpec.describe "api stock and reports", type: :request do
         { "warehouse_id" => warehouse.id, "item_id" => item.id, "quantity" => 7,
           "lot" => { "id" => lot.id, "item_id" => item.id, "lot_number" => lot.lot_number, "expiry_date" => lot.expiry_date.iso8601 } }
       ])
+      expect(response.parsed_body["next_cursor"]).to be_nil
+    end
+
+    context "with more lots than fit on a page" do
+      before { stub_const("StockOnHandReport::PER_PAGE", 2) }
+
+      let!(:lots) { Array.new(3) { stock(expiry_date: Date.current + 10, quantity: 5) } }
+
+      def lot_ids
+        response.parsed_body["stock"].map { |row| row.dig("lot", "id") }
+      end
+
+      it "pages through the stock with the next_cursor of each page" do
+        get api_v1_stock_path, headers: api_headers(token)
+        expect(lot_ids).to eq(lots.first(2).map(&:id))
+
+        get api_v1_stock_path(after: response.parsed_body["next_cursor"]), headers: api_headers(token)
+        expect(lot_ids).to eq([ lots.last.id ])
+        expect(response.parsed_body["next_cursor"]).to be_nil
+      end
+
+      it "does not skip a lot when a lot on an earlier page runs out" do
+        get api_v1_stock_path, headers: api_headers(token)
+        create(:stock_movement, :issue, warehouse: warehouse, lot: lots.first, quantity: -5)
+
+        get api_v1_stock_path(after: response.parsed_body["next_cursor"]), headers: api_headers(token)
+
+        expect(lot_ids).to eq([ lots.last.id ])
+      end
+    end
+
+    it "rejects a cursor it did not issue" do
+      get api_v1_stock_path(after: "page-2"), headers: api_headers(token)
+
+      expect(response).to have_http_status(:bad_request)
+      expect(error_code).to eq("invalid_parameter")
     end
   end
 

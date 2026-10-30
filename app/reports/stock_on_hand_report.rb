@@ -1,7 +1,17 @@
 class StockOnHandReport
+  PER_PAGE = 50
+
   Row = Data.define(:warehouse, :lot, :quantity) do
     def item
       lot.item
+    end
+  end
+
+  CursorPage = Data.define(:rows, :last) do
+    alias_method :last?, :last
+
+    def next_after
+      [ rows.last.warehouse.id, rows.last.lot.id ] unless last?
     end
   end
 
@@ -12,6 +22,14 @@ class StockOnHandReport
 
   def rows
     build(in_display_order.pluck("stock_movements.warehouse_id", "stock_movements.lot_id", "stock_movements.quantity"))
+  end
+
+  def after(position, per: PER_PAGE)
+    scope = balances.order(:warehouse_id, :lot_id).limit(per + 1)
+    scope = scope.where("(stock_movements.warehouse_id, stock_movements.lot_id) > (?, ?)", *position) if position
+    found = build(scope.pluck(:warehouse_id, :lot_id, "SUM(quantity)"))
+
+    CursorPage.new(rows: found.first(per), last: found.size <= per)
   end
 
   private

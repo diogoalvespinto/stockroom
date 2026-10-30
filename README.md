@@ -158,7 +158,7 @@ curl -X POST localhost:3000/api/v1/issues \
 | GET | `/api/v1/warehouses` | |
 | GET | `/api/v1/items` | |
 | GET | `/api/v1/items/:item_id/lots` | in FEFO order |
-| GET | `/api/v1/stock` | `?warehouse_id=` optional |
+| GET | `/api/v1/stock` | `?warehouse_id=` optional; 50 rows per page, `?after=` takes the `next_cursor` of the previous page |
 | GET | `/api/v1/reports/expiring_lots` | `?days=` from 1 to 365, default 30 |
 | GET | `/api/v1/reports/below_reorder_level` | |
 | POST | `/api/v1/receipts` | `item_id, warehouse_id, lot_number, expiry_date, quantity` |
@@ -167,6 +167,10 @@ curl -X POST localhost:3000/api/v1/issues \
 | POST | `/api/v1/adjustments` | `lot_id, warehouse_id, quantity, reason` (quantity is signed) |
 
 Every `POST` requires `Idempotency-Key` and answers `201` with `{ "movements": [...] }`.
+
+`GET /api/v1/stock` answers `{ "stock": [...], "next_cursor": "..." }`, ordered by warehouse and
+lot id. `next_cursor` is `null` on the last page.
+
 Every error has the same shape:
 
 ```json
@@ -176,7 +180,7 @@ Every error has the same shape:
 
 | Status | When |
 | --- | --- |
-| `400` | malformed JSON, a missing field or an invalid `Idempotency-Key` |
+| `400` | malformed JSON, a missing field, an invalid `Idempotency-Key` or an unknown cursor |
 | `401` | a missing or unknown token |
 | `404` | an unknown record or path |
 | `422` | a business-rule or validation failure, or a reused idempotency key |
